@@ -30,7 +30,8 @@ class AllenDashboard(widgets.VBox):
             roi_response_series=nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'],
             foreign_time_window_controller=self.time_window_controller,
             foreign_group_and_sort_controller=None,
-            dynamic_table_region_name=None
+            dynamic_table_region_name=None,
+            allen_dashboard=True
         )
 
         self.output_box = widgets.VBox([self.time_window_controller, self.fluorescence, self.electrical])
