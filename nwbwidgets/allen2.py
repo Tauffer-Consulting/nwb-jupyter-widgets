@@ -24,6 +24,7 @@ class AllenDashboard(widgets.VBox):
             start=0,
             duration=5
         )
+
         # Electrophys single trace
         self.electrical = SingleTracePlotlyWidget(
             timeseries=nwb.processing['ecephys'].data_interfaces['filtered_membrane_voltage'],
