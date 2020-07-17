@@ -14,7 +14,7 @@ class AllenDashboard(widgets.VBox):
         # self.tmax = get_timeseries_maxt(time_series)
         self.lines_select = False
 
-        self.btn_lines = widgets.Button(description='Enable spike times', button_style='')
+        self.btn_lines = widgets.Button(description='Show spike times', button_style='')
         self.btn_lines.on_click(self.btn_lines_dealer)
 
         # Start time and duration controller
@@ -34,10 +34,11 @@ class AllenDashboard(widgets.VBox):
         self.electrical.out_fig.update_layout(
             title=None,
             xaxis_title=None,
-            width=500,
+            width=600,
             height=230,
-            margin=dict(l=8, r=8, t=8, b=8),
+            margin=dict(l=0, r=8, t=8, b=8),
             xaxis={"showticklabels": False, "ticks": ""},
+            # yaxis={"position": 0, "anchor": "free"}
         )
         # Fluorescence single trace
         self.fluorescence = SingleTracePlotlyWidget(
@@ -51,7 +52,7 @@ class AllenDashboard(widgets.VBox):
 
     def btn_lines_dealer(self, b=0):
         self.lines_select = not self.lines_select
-        if 'disable' in self.btn_lines.description.lower():
+        if self.lines_select:
             self.btn_lines.description = 'Show spike times'
         else:
             self.btn_lines.description = 'Disable spike times'
