@@ -54,10 +54,13 @@ class AllenDashboard(widgets.VBox):
 
         self.children = [hbox_header, hbox_widgets]
 
-        # Updates list of valid spike times at each change in time range
-        self.time_window_controller.observe(self.updated_time_range)
-
         self.update_spike_traces()
+
+    def update_frame_point(self, change):
+        """Updates Image frame and frame point relative position on temporal traces"""
+        if isinstance(change['new'], int):
+            self.electrical.out_fig.data[1].x = [change['new'], change['new']]
+            self.fluorescence.out_fig.data[1].x = [change['new'], change['new']]
 
     def updated_time_range(self, change=None):
         """Operations to run whenever time range gets updated"""
