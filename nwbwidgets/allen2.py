@@ -1,9 +1,9 @@
 from ipywidgets import widgets
 from pynwb import TimeSeries
-#from nwbwidgets.utils.timeseries import get_timeseries_maxt, get_timeseries_mint
-from .controllers import StartAndDurationController,  GroupAndSortController
+# from nwbwidgets.utils.timeseries import get_timeseries_maxt, get_timeseries_mint
+from .controllers import StartAndDurationController
 from .ophys import RoiResponseSeriesWidget, TwoPhotonSeriesWidget
-from .ecephys import ElectricalSeriesWidget
+from .timeseries import SingleTracePlotlyWidget
 
 
 class AllenDashboard(widgets.VBox):
@@ -17,35 +17,40 @@ class AllenDashboard(widgets.VBox):
         self.btn_lines = widgets.Button(description='Enable spike times', button_style='')
         self.btn_lines.on_click(self.btn_lines_dealer)
 
+        # Start time and duration controller
         self.time_window_controller = StartAndDurationController(
             tmin=0,
             tmax=120,
             start=0,
             duration=5
         )
-
-        self.electrical = ElectricalSeriesWidget(
-            electrical_series=nwb.processing['ecephys'].data_interfaces['filtered_membrane_voltage'],
+        # Electrophys single trace
+        self.electrical = SingleTracePlotlyWidget(
+            timeseries=nwb.processing['ecephys'].data_interfaces['filtered_membrane_voltage'],
             foreign_time_window_controller=self.time_window_controller,
             foreign_group_and_sort_controller=None,
             neurodata_vis_spec=None
         )
-
-        self.fluorescence = RoiResponseSeriesWidget(
-            roi_response_series=nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'],
+        self.electrical.out_fig.update_layout(
+            title=None,
+            xaxis_title=None,
+            width=500,
+            height=300,
+            margin=dict(l=8, r=8, t=8, b=8),
+        )
+        # Fluorescence single trace
+        self.fluorescence = SingleTracePlotlyWidget(
+            timeseries=nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'],
             foreign_time_window_controller=self.time_window_controller,
-            foreign_group_and_sort_controller=None,
-            dynamic_table_region_name=None,
-            allen_dashboard=True
         )
 
         self.output_box = widgets.VBox([self.time_window_controller, self.fluorescence, self.electrical])
 
-        self.children = [self.output_box]
+        self.children = [hbox_header, hbox_widgets]
 
     def btn_lines_dealer(self, b=0):
         self.lines_select = not self.lines_select
         if 'disable' in self.btn_lines.description.lower():
-            self.btn_lines.description = 'Enable spike times'
+            self.btn_lines.description = 'Show spike times'
         else:
             self.btn_lines.description = 'Disable spike times'

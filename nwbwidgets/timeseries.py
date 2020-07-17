@@ -394,7 +394,7 @@ class BaseGroupedTraceWidget(widgets.HBox):
     def __init__(self, time_series: TimeSeries, dynamic_table_region_name=None,
                  foreign_time_window_controller: StartAndDurationController = None,
                  foreign_group_and_sort_controller: GroupAndSortController = None,
-                 mpl_plotter=plot_grouped_traces, allen_dashboard=False, **kwargs):
+                 mpl_plotter=plot_grouped_traces, **kwargs):
         """
 
         Parameters
