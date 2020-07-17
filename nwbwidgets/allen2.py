@@ -1,7 +1,7 @@
 from ipywidgets import widgets
 # from nwbwidgets.utils.timeseries import get_timeseries_maxt, get_timeseries_mint
 from .controllers import StartAndDurationController
-# from .ophys import TwoPhotonSeriesWidget
+import plotly.graph_objects as go
 from .timeseries import SingleTracePlotlyWidget
 from .image import ImageSeriesWidget
 
@@ -9,13 +9,13 @@ from .image import ImageSeriesWidget
 class AllenDashboard(widgets.VBox):
     def __init__(self, nwb):
         super().__init__()
+        self.nwb = nwb
 
         # self.tmin = get_timeseries_mint(time_series)
         # self.tmax = get_timeseries_maxt(time_series)
-        self.lines_select = False
-
-        self.btn_lines = widgets.Button(description='Show spike times', button_style='')
-        self.btn_lines.on_click(self.btn_lines_dealer)
+        self.show_spikes = False
+        self.btn_spike_times = widgets.Button(description='Show spike times', button_style='')
+        self.btn_spike_times.on_click(self.spikes_viewer)
 
         # Start time and duration controller
         self.time_window_controller = StartAndDurationController(
@@ -33,12 +33,15 @@ class AllenDashboard(widgets.VBox):
         )
         self.electrical.out_fig.update_layout(
             title=None,
+            showlegend=False,
             xaxis_title=None,
             width=600,
             height=230,
             margin=dict(l=0, r=8, t=8, b=8),
-            xaxis={"showticklabels": False, "ticks": ""},
-            # yaxis={"position": 0, "anchor": "free"}
+            # yaxis={"position": 0, "anchor": "free"},
+            yaxis={"range": [min(self.electrical.out_fig.data[0].y), max(self.electrical.out_fig.data[0].y)],
+                   "autorange": False},
+            xaxis={"showticklabels": False, "ticks": ""}
         )
         # Fluorescence single trace
         self.fluorescence = SingleTracePlotlyWidget(
@@ -50,9 +53,25 @@ class AllenDashboard(widgets.VBox):
 
         self.children = [hbox_header, hbox_widgets]
 
-    def btn_lines_dealer(self, b=0):
-        self.lines_select = not self.lines_select
-        if self.lines_select:
-            self.btn_lines.description = 'Show spike times'
+        # Updates list of valid spike times at each change in time range
+        self.time_window_controller.observe(self.updated_time_range)
+
+        self.update_spike_traces()
+
+    def updated_time_range(self, change=None):
+        """Operations to run whenever time range gets updated"""
+        self.update_spike_traces()
+        self.show_spikes = False
+        self.btn_spike_times.description = 'Show spike times'
+        self.fluorescence.out_fig.data = [self.fluorescence.out_fig.data[0]]
+        self.electrical.out_fig.data = [self.electrical.out_fig.data[0]]
+
+    def spikes_viewer(self, b=None):
+        self.show_spikes = not self.show_spikes
+        if self.show_spikes:
+            self.btn_spike_times.description = 'Hide spike times'
+            for spike_trace in self.spike_traces:
+                self.fluorescence.out_fig.add_trace(spike_trace)
+                # self.electrical.out_fig.add_trace(spike_trace)
         else:
             self.btn_lines.description = 'Disable spike times'
