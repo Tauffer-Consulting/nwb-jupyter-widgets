@@ -1,10 +1,11 @@
-from ipywidgets import widgets
+from nwbwidgets.utils.timeseries import get_timeseries_maxt, get_timeseries_mint
 from .controllers import StartAndDurationController
-import plotly.graph_objects as go
 from .timeseries import SingleTracePlotlyWidget
 from .image import ImageSeriesWidget
+import plotly.graph_objects as go
+from ipywidgets import widgets, Layout
+from tifffile import imread
 import numpy as np
-from tifffile import imread, TiffFile
 
 
 class AllenDashboard(widgets.VBox):
@@ -17,11 +18,13 @@ class AllenDashboard(widgets.VBox):
         self.btn_spike_times.on_click(self.spikes_viewer)
 
         # Start time and duration controller
+        self.tmin = get_timeseries_mint(nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'])
+        self.tmax = get_timeseries_maxt(nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'])
         self.time_window_controller = StartAndDurationController(
-            tmin=0,
-            tmax=120,
+            tmin=self.tmin,
+            tmax=self.tmax,
             start=0,
-            duration=5
+            duration=5,
         )
 
         # Electrophys single trace
@@ -35,9 +38,9 @@ class AllenDashboard(widgets.VBox):
             title=None,
             showlegend=False,
             xaxis_title=None,
-            width=600,
+            width=800,
             height=230,
-            margin=dict(l=0, r=8, t=8, b=8),
+            margin=dict(l=0, r=8, t=8, b=20),
             # yaxis={"position": 0, "anchor": "free"},
             yaxis={"range": [min(self.electrical.out_fig.data[0].y), max(self.electrical.out_fig.data[0].y)],
                    "autorange": False},
