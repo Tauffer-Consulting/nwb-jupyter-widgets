@@ -66,7 +66,7 @@ class AllenDashboard(widgets.VBox):
             self.fluorescence.out_fig.data[1].x = [change['new'], change['new']]
 
             frame_number = int(change['new'] * self.nwb.acquisition['raw_ophys'].rate)
-            path_ext_file = self.nwb.acquisition['raw_ophys'].external_file[0]
+            path_ext_file = self.nwb.acquisition['raw_ophys']
             image = imread(path_ext_file, key=frame_number)
             self.photon_series.out_fig.data[0].z = image
 
