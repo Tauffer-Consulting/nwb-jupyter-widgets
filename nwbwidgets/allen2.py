@@ -40,13 +40,15 @@ class AllenDashboard(widgets.VBox):
             showlegend=False,
             xaxis_title=None,
             yaxis_title='Volts',
-            width=800,
+            width=850,
             height=230,
-            margin=dict(l=0, r=8, t=8, b=20),
+            margin=dict(l=60, r=200, t=8, b=20),
             # yaxis={"position": 0, "anchor": "free"},
             yaxis={"range": [min(self.electrical.out_fig.data[0].y), max(self.electrical.out_fig.data[0].y)],
                    "autorange": False},
-            xaxis={"showticklabels": False, "ticks": ""}
+            xaxis={"showticklabels": False, "ticks": "",
+                   "range": [min(self.electrical.out_fig.data[0].x), max(self.electrical.out_fig.data[0].x)],
+                   "autorange": False}
         )
         # Fluorescence single trace
         self.fluorescence = SingleTracePlotlyWidget(
@@ -56,14 +58,13 @@ class AllenDashboard(widgets.VBox):
 
         self.output_box = widgets.VBox([self.time_window_controller, self.fluorescence, self.electrical])
 
-        self.children = [hbox_header, hbox_widgets]
+        self.children = [hbox_header, self.frame_controller, hbox_widgets]
 
         self.update_spike_traces()
 
     def update_frame_point(self, change):
         """Updates Image frame and frame point relative position on temporal traces"""
-        if isinstance(change['new'], int):
-            self.change = change['new']
+        if isinstance(change['new'], float):
             self.electrical.out_fig.data[1].x = [change['new'], change['new']]
             self.fluorescence.out_fig.data[1].x = [change['new'], change['new']]
 
@@ -77,23 +78,23 @@ class AllenDashboard(widgets.VBox):
         self.update_spike_traces()
         self.show_spikes = False
 
-        # check if up or down slider
-        if self.time_window_controller.value[0] >= self.frame_controller.min:
-            self.frame_controller.max = self.time_window_controller.value[1]
-            self.frame_controller.min = self.time_window_controller.value[0]
-        else:
-            self.frame_controller.min = self.time_window_controller.value[0]
-            self.frame_controller.max = self.time_window_controller.value[1]
-
+        # Update frame slider
+        self.frame_controller.min = self.time_window_controller.value[0]
+        self.frame_controller.max = self.time_window_controller.value[1]
         xpoint = round(np.mean(self.time_window_controller.value))
-        self.frame_point = go.Scatter(x=[xpoint, xpoint], y=[-1000, 1000])
-        self.frame_controller.value = xpoint
+        self.electrical.out_fig.data[1].x = [xpoint, xpoint]
+        self.fluorescence.out_fig.data[1].x = [xpoint, xpoint]
 
+        # Reset spike times view
         self.btn_spike_times.description = 'Show spike times'
-        self.fluorescence.out_fig.data = [self.fluorescence.out_fig.data[0]]
-        self.electrical.out_fig.data = [self.electrical.out_fig.data[0]]
-        self.electrical.out_fig.add_trace(self.frame_point)
-        self.fluorescence.out_fig.add_trace(self.frame_point)
+        self.fluorescence.out_fig.data = [
+            self.fluorescence.out_fig.data[0],
+            self.fluorescence.out_fig.data[1]
+        ]
+        self.electrical.out_fig.data = [
+            self.electrical.out_fig.data[0],
+            self.electrical.out_fig.data[1]
+        ]
 
     def spikes_viewer(self, b=None):
         self.show_spikes = not self.show_spikes
@@ -101,6 +102,5 @@ class AllenDashboard(widgets.VBox):
             self.btn_spike_times.description = 'Hide spike times'
             for spike_trace in self.spike_traces:
                 self.fluorescence.out_fig.add_trace(spike_trace)
-                # self.electrical.out_fig.add_trace(spike_trace)
         else:
             self.btn_lines.description = 'Disable spike times'
