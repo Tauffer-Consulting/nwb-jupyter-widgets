@@ -39,6 +39,7 @@ class AllenDashboard(widgets.VBox):
             title=None,
             showlegend=False,
             xaxis_title=None,
+            yaxis_title='Volts',
             width=800,
             height=230,
             margin=dict(l=0, r=8, t=8, b=20),
