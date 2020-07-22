@@ -6,6 +6,7 @@ import pynwb
 from ipywidgets import widgets, fixed
 from pynwb.image import GrayscaleImage, ImageSeries, RGBImage
 from tifffile import imread, TiffFile
+from pathlib import Path, PureWindowsPath
 
 from .base import fig2widget
 from .controllers import StartAndDurationController
