@@ -1,7 +1,8 @@
 from nwbwidgets.utils.timeseries import get_timeseries_maxt, get_timeseries_mint
 from nwbwidgets.controllers import StartAndDurationController
 from nwbwidgets.timeseries import SingleTracePlotlyWidget
-from nwbwidgets.image import ImageSeriesWidget
+# from nwbwidgets.image import ImageSeriesWidget
+from nwbwidgets.ophys import OphysImageSeriesWidget
 import plotly.graph_objects as go
 from ipywidgets import widgets, Layout
 from tifffile import imread
@@ -66,8 +67,9 @@ class AllenDashboard(widgets.VBox):
                    "autorange": False, "constrain": "domain", "anchor": "free"}
         )
         # Two photon imaging
-        self.photon_series = ImageSeriesWidget(
+        self.photon_series = OphysImageSeriesWidget(
             imageseries=nwb.acquisition['raw_ophys'],
+            pixel_mask=nwb.processing['ophys'].data_interfaces['image_segmentation'].plane_segmentations['plane_segmentation'].pixel_mask[:],
             foreign_time_window_controller=self.time_window_controller,
         )
         self.photon_series.out_fig.update_layout(

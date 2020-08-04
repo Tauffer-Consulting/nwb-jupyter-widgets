@@ -4,16 +4,32 @@ import numpy as np
 import plotly.graph_objects as go
 from ndx_grayscalevolume import GrayscaleVolume
 from pynwb.base import NWBDataInterface
+from pynwb.image import ImageSeries
 from pynwb.ophys import RoiResponseSeries, DfOverF, PlaneSegmentation, TwoPhotonSeries, ImageSegmentation
 from skimage import measure
 from tifffile import imread, TiffFile
 
+from .controllers import StartAndDurationController
 from .timeseries import BaseGroupedTraceWidget
+from .image import ImageSeriesWidget
 from .utils.cmaps import linear_transfer_function
 from .utils.dynamictable import infer_categorical_columns
 from .utils.functional import MemoizeMutable
 
+
 color_wheel = ['red', 'blue', 'green', 'black', 'magenta', 'yellow']
+
+
+class OphysImageSeriesWidget(ImageSeriesWidget):
+    """Widget extending ImageSeries for Optophysiology."""
+
+    def __init__(self, imageseries: ImageSeries,
+                 pixel_mask: np.ndarray = None,
+                 foreign_time_window_controller: StartAndDurationController = None,
+                 **kwargs):
+        super().__init__(imageseries=imageseries,
+                         foreign_time_window_controller=foreign_time_window_controller,
+                         **kwargs)
 
 
 class TwoPhotonSeriesWidget(widgets.VBox):
