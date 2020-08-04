@@ -14,10 +14,6 @@ class AllenDashboard(widgets.VBox):
     def __init__(self, nwb):
         super().__init__()
         self.nwb = nwb
-        self.show_spikes = False
-
-        self.btn_spike_times = widgets.Button(description='Show spike times', button_style='')
-        self.btn_spike_times.on_click(self.spikes_viewer)
 
         # Start time and duration controller
         self.tmin = get_timeseries_mint(nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'])
@@ -66,6 +62,26 @@ class AllenDashboard(widgets.VBox):
             xaxis={"range": [min(self.fluorescence.out_fig.data[0].x), max(self.fluorescence.out_fig.data[0].x)],
                    "autorange": False, "constrain": "domain", "anchor": "free"}
         )
+        
+        self.spikes_fluorescence = SingleTracePlotlyWidget(
+            timeseries=nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'],
+            foreign_time_window_controller=self.time_window_controller,
+        )
+
+        self.spikes_fluorescence.out_fig.update_layout(
+            title=None,
+            showlegend=False,
+            width=840,
+            height=230,
+            margin=dict(l=60, r=200, t=8, b=20),
+            yaxis_title='dF/F',
+            xaxis_title=None,
+            yaxis={"range": [min(self.fluorescence.out_fig.data[0].y), max(self.fluorescence.out_fig.data[0].y)],
+                   "autorange": False},
+            xaxis={"range": [min(self.fluorescence.out_fig.data[0].x), max(self.fluorescence.out_fig.data[0].x)],
+                   "autorange": False, "constrain": "domain", "anchor": "free"}
+        )
+
         # Two photon imaging
         self.photon_series = OphysImageSeriesWidget(
             imageseries=nwb.acquisition['raw_ophys'],
@@ -95,6 +111,7 @@ class AllenDashboard(widgets.VBox):
         self.frame_point = go.Scatter(x=[0, 0], y=[-1000, 1000])
         self.electrical.out_fig.add_trace(self.frame_point)
         self.fluorescence.out_fig.add_trace(self.frame_point)
+        self.spikes_fluorescence.out_fig.add_trace(self.frame_point)
 
         # Updates frame point
         self.frame_controller.observe(self.update_frame_point)
@@ -103,19 +120,21 @@ class AllenDashboard(widgets.VBox):
         self.time_window_controller.observe(self.updated_time_range)
 
         # Layout
-        hbox_header = widgets.HBox([self.btn_spike_times, self.time_window_controller])
-        vbox_widgets = widgets.VBox([self.electrical, self.fluorescence])
+        hbox_header = widgets.HBox([self.time_window_controller])
+        vbox_widgets = widgets.VBox([self.electrical, self.spikes_fluorescence, self.fluorescence])
         hbox_widgets = widgets.HBox([vbox_widgets, self.photon_series])
+        
+        self.update_spike_traces()
 
         self.children = [hbox_header, self.frame_controller, hbox_widgets]
 
-        self.update_spike_traces()
 
     def update_frame_point(self, change):
         """Updates Image frame and frame point relative position on temporal traces"""
         if isinstance(change['new'], float):
             self.electrical.out_fig.data[1].x = [change['new'], change['new']]
             self.fluorescence.out_fig.data[1].x = [change['new'], change['new']]
+            self.spikes_fluorescence.out_fig.data[1].x = [change['new'], change['new']]
 
             frame_number = int(change['new'] * self.nwb.acquisition['raw_ophys'].rate)
             file_path = self.nwb.acquisition['raw_ophys'].external_file[0]
@@ -130,7 +149,6 @@ class AllenDashboard(widgets.VBox):
     def updated_time_range(self, change=None):
         """Operations to run whenever time range gets updated"""
         self.update_spike_traces()
-        self.show_spikes = False
 
         # Update frame slider
         if self.time_window_controller.value[1] < self.frame_controller.min:
@@ -144,8 +162,6 @@ class AllenDashboard(widgets.VBox):
         self.electrical.out_fig.data[1].x = [xpoint, xpoint]
         self.fluorescence.out_fig.data[1].x = [xpoint, xpoint]
 
-        # Reset spike times view
-        self.btn_spike_times.description = 'Show spike times'
         self.fluorescence.out_fig.data = [
             self.fluorescence.out_fig.data[0],
             self.fluorescence.out_fig.data[1]
@@ -156,17 +172,10 @@ class AllenDashboard(widgets.VBox):
         ]
 
     def spikes_viewer(self, b=None):
-        self.show_spikes = not self.show_spikes
-        if self.show_spikes:
-            self.btn_spike_times.description = 'Hide spike times'
-            for spike_trace in self.spike_traces:
-                self.fluorescence.out_fig.add_trace(spike_trace)
-        else:
-            self.btn_spike_times.description = 'Show spike times'
-            self.fluorescence.out_fig.data = [
-                self.fluorescence.out_fig.data[0],
-                self.fluorescence.out_fig.data[1]
-            ]
+        # self.show_spikes = not self.show_spikes
+        
+        for spike_trace in self.spike_traces:
+            self.spikes_fluorescence.out_fig.add_trace(spike_trace)
 
     def update_spike_traces(self):
         """Updates list of go.Scatter objects at spike times"""
@@ -183,3 +192,4 @@ class AllenDashboard(widgets.VBox):
                 y=[-1000, 1000],
                 line={"color": "gray", "width": .5}
             ))
+        self.spikes_viewer()
