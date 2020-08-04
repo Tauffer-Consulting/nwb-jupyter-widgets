@@ -1,10 +1,11 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from ipywidgets import widgets
-from scipy.signal import stft
-from pynwb.ecephys import LFP, SpikeEventSeries, ElectricalSeries
-from .base import fig2widget, nwb2widget
+import numpy as np
 from IPython import display
+from ipywidgets import widgets
+from pynwb.ecephys import LFP, SpikeEventSeries, ElectricalSeries
+from scipy.signal import stft
+
+from .base import fig2widget, nwb2widget
 from .timeseries import BaseGroupedTraceWidget
 
 
@@ -15,12 +16,12 @@ def show_lfp(node: LFP, neurodata_vis_spec: dict):
 
 def show_spectrogram(neurodata, channel=0, **kwargs):
     fig, ax = plt.subplots()
-    f, t, Zxx = stft(neurodata.data[:, channel], neurodata.rate, nperseg=2*17)
+    f, t, Zxx = stft(neurodata.data[:, channel], neurodata.rate, nperseg=2 * 17)
     ax.imshow(np.log(np.abs(Zxx)), aspect='auto', extent=[0, max(t), 0, max(f)], origin='lower')
     ax.set_ylim(0, max(f))
     ax.set_xlabel('time')
     ax.set_ylabel('frequency')
-    plt.show(ax)
+    fig.show()
 
 
 def ElectrodesWidget(node):
@@ -42,7 +43,7 @@ def show_spike_event_series(ses: SpikeEventSeries, **kwargs):
         ax.plot(np.mean(data, axis=1), color='k')
         ax.set_xlabel('Time')
         ax.set_ylabel('Amplitude')
-        plt.show()
+        fig.show()
         return fig2widget(fig)
 
     if len(ses.data.shape) == 3:
@@ -54,7 +55,7 @@ def show_spike_event_series(ses: SpikeEventSeries, **kwargs):
     # Controls
     field_lay = widgets.Layout(max_height='40px', max_width='100px',
                                min_height='30px', min_width='70px')
-    spk_ind = widgets.BoundedIntText(value=0, min=0, max=nSpikes-1,
+    spk_ind = widgets.BoundedIntText(value=0, min=0, max=nSpikes - 1,
                                      layout=field_lay)
     controls = {'spk_ind': spk_ind}
     out_fig = widgets.interactive_output(control_plot, controls)
@@ -79,11 +80,11 @@ def show_spike_event_series(ses: SpikeEventSeries, **kwargs):
 class ElectricalSeriesWidget(BaseGroupedTraceWidget):
     def __init__(self, electrical_series: ElectricalSeries, neurodata_vis_spec=None,
                  foreign_time_window_controller=None, foreign_group_and_sort_controller=None,
-                 **kwargs):
+                 dynamic_table_region_name='electrodes', **kwargs):
         if foreign_group_and_sort_controller is not None:
             table = None
         else:
-            table = 'electrodes'
+            table = dynamic_table_region_name
         super().__init__(electrical_series, table,
                          foreign_time_window_controller=foreign_time_window_controller,
                          foreign_group_and_sort_controller=foreign_group_and_sort_controller,
