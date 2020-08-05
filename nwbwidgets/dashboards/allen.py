@@ -24,6 +24,9 @@ class AllenDashboard(widgets.VBox):
             start=0,
             duration=5,
         )
+        self.btn_mask = widgets.Button(description='Pixel Mask')
+        self.btn_mask.on_click(self.add_mask)
+        self.btn_mask_active = False
 
         # Electrophys single trace
         self.electrical = SingleTracePlotlyWidget(
@@ -62,7 +65,7 @@ class AllenDashboard(widgets.VBox):
             xaxis={"range": [min(self.fluorescence.out_fig.data[0].x), max(self.fluorescence.out_fig.data[0].x)],
                    "autorange": False, "constrain": "domain", "anchor": "free"}
         )
-        
+
         self.spikes_fluorescence = SingleTracePlotlyWidget(
             timeseries=nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'],
             foreign_time_window_controller=self.time_window_controller,
@@ -120,14 +123,29 @@ class AllenDashboard(widgets.VBox):
         self.time_window_controller.observe(self.updated_time_range)
 
         # Layout
-        hbox_header = widgets.HBox([self.time_window_controller])
+        hbox_header = widgets.HBox([self.time_window_controller, self.btn_mask])
         vbox_widgets = widgets.VBox([self.electrical, self.spikes_fluorescence, self.fluorescence])
         hbox_widgets = widgets.HBox([vbox_widgets, self.photon_series])
-        
+
         self.update_spike_traces()
 
         self.children = [hbox_header, self.frame_controller, hbox_widgets]
 
+    def add_mask(self, b=0):
+        self.btn_mask_active = not self.btn_mask_active
+        if self.btn_mask_active:
+            mask = self.nwb.processing['ophys'].data_interfaces['image_segmentation']['plane_segmantation']['pixel_mask'][:][0]
+            x_coords = mask[:, 0].astype(np.int)
+            y_coords = mask[:, 1].astype(np.int)
+            if len(self.photon_series.out_fig.data) == 1:
+                trace = go.Scatter(x=x_coords,y=y_coords,fill=None)
+                self.photon_series.out_fig.add_trace(trace)
+            else:
+                self.photon_series.out_fig.data[1].x = x_coords
+                self.photon_series.out_fig.data[1].y = y_coords
+        else:
+            self.photon_series.out_fig.data[1].x = []
+            self.photon_series.out_fig.data[1].y = []
 
     def update_frame_point(self, change):
         """Updates Image frame and frame point relative position on temporal traces"""
@@ -137,7 +155,9 @@ class AllenDashboard(widgets.VBox):
             self.spikes_fluorescence.out_fig.data[1].x = [change['new'], change['new']]
 
             frame_number = int(change['new'] * self.nwb.acquisition['raw_ophys'].rate)
+            self.frame_number = frame_number
             file_path = self.nwb.acquisition['raw_ophys'].external_file[0]
+            self.file_path = file_path
             if "\\" in file_path:
                 win_path = PureWindowsPath(file_path)
                 path_ext_file = Path(win_path)
@@ -173,7 +193,7 @@ class AllenDashboard(widgets.VBox):
 
     def spikes_viewer(self, b=None):
         # self.show_spikes = not self.show_spikes
-        
+
         for spike_trace in self.spike_traces:
             self.spikes_fluorescence.out_fig.add_trace(spike_trace)
 
