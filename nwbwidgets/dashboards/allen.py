@@ -105,7 +105,7 @@ class AllenDashboard(widgets.VBox):
         )
         self.photon_series.out_fig.update_layout(
             showlegend=False,
-            margin=dict(l=10, r=25, t=30, b=65),
+            margin=dict(l=10, r=30, t=20, b=80),
         )
 
         # Frame controller
@@ -115,11 +115,11 @@ class AllenDashboard(widgets.VBox):
             min=self.time_window_controller.value[0],
             max=self.time_window_controller.value[1],
             description='Frame: ',
-            style={'description_width': '55px'},
+            style={'description_width': '360px'},
             continuous_update=False,
             readout=False,
             orientation='horizontal',
-            layout=Layout(width='645px'),
+            layout=Layout(width='923px')
         )
 
         # Add line traces marking Image frame point
