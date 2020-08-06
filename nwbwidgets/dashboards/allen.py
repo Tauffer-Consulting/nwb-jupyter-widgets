@@ -1,9 +1,10 @@
-from nwbwidgets.utils.timeseries import get_timeseries_maxt, get_timeseries_mint
+from nwbwidgets.utils.timeseries import (get_timeseries_maxt, get_timeseries_mint,
+                                         timeseries_time_to_ind, get_timeseries_in_units,
+                                         get_timeseries_tt)
 from nwbwidgets.controllers import StartAndDurationController
-from nwbwidgets.timeseries import SingleTracePlotlyWidget
-# from nwbwidgets.image import ImageSeriesWidget
 from nwbwidgets.ophys import OphysImageSeriesWidget
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from ipywidgets import widgets, Layout
 from tifffile import imread
 from pathlib import Path, PureWindowsPath
@@ -25,62 +26,76 @@ class AllenDashboard(widgets.VBox):
             duration=5,
         )
 
-        # Electrophys single trace
-        self.electrical = SingleTracePlotlyWidget(
-            timeseries=nwb.processing['ecephys'].data_interfaces['filtered_membrane_voltage'],
-            foreign_time_window_controller=self.time_window_controller,
-        )
-        self.electrical.out_fig.update_layout(
-            title=None,
-            showlegend=False,
-            xaxis_title=None,
-            yaxis_title='Volts',
-            width=840,
-            height=230,
-            margin=dict(l=60, r=200, t=8, b=20),
-            # yaxis={"position": 0, "anchor": "free"},
-            yaxis={"range": [min(self.electrical.out_fig.data[0].y), max(self.electrical.out_fig.data[0].y)],
-                   "autorange": False},
-            xaxis={"showticklabels": False, "ticks": "",
-                   "range": [min(self.electrical.out_fig.data[0].x), max(self.electrical.out_fig.data[0].x)],
-                   "autorange": False}
-        )
-        # Fluorescence single trace
-        self.fluorescence = SingleTracePlotlyWidget(
-            timeseries=nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'],
-            foreign_time_window_controller=self.time_window_controller,
-        )
-        self.fluorescence.out_fig.update_layout(
-            title=None,
-            showlegend=False,
-            width=840,
-            height=230,
-            margin=dict(l=60, r=200, t=8, b=20),
-            yaxis_title='dF/F',
-            yaxis={"range": [min(self.fluorescence.out_fig.data[0].y), max(self.fluorescence.out_fig.data[0].y)],
-                   "autorange": False},
-            xaxis={"range": [min(self.fluorescence.out_fig.data[0].x), max(self.fluorescence.out_fig.data[0].x)],
-                   "autorange": False, "constrain": "domain", "anchor": "free"}
-        )
-        
-        self.spikes_fluorescence = SingleTracePlotlyWidget(
-            timeseries=nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series'],
-            foreign_time_window_controller=self.time_window_controller,
+        # Traces
+        traces = make_subplots(rows=3, cols=1, row_heights=[0.4, 0.2, 0.4],
+                               shared_xaxes=False, vertical_spacing=0.02)
+
+        # Electrophysiology
+        self.ecephys_trace = nwb.processing['ecephys'].data_interfaces['filtered_membrane_voltage']
+        traces.add_trace(
+            go.Scatter(
+                x=[0],
+                y=[0],
+                line={"color": "black", "width": 1},
+                mode='lines'
+            ),
+            row=1, col=1
         )
 
-        self.spikes_fluorescence.out_fig.update_layout(
-            title=None,
-            showlegend=False,
-            width=840,
-            height=230,
-            margin=dict(l=60, r=200, t=8, b=20),
-            yaxis_title='dF/F',
-            xaxis_title=None,
-            yaxis={"range": [min(self.fluorescence.out_fig.data[0].y), max(self.fluorescence.out_fig.data[0].y)],
-                   "autorange": False},
-            xaxis={"range": [min(self.fluorescence.out_fig.data[0].x), max(self.fluorescence.out_fig.data[0].x)],
-                   "autorange": False, "constrain": "domain", "anchor": "free"}
+        # Optophysiology
+        self.ophys_trace = nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series']
+        traces.add_trace(
+            go.Scatter(
+                x=[0],
+                y=[0],
+                line={"color": "black", "width": 1},
+                mode='lines'),
+            row=3, col=1
         )
+
+        # Spikes
+        traces.add_trace(
+            go.Scatter(
+                x=[0],
+                y=[0],
+                line={"color": "gray", "width": .5},
+                mode='lines'),
+            row=2, col=1
+        )
+
+        # Layout
+        traces.update_layout(
+            height=400, width=800, showlegend=False, title=None,
+            paper_bgcolor='rgba(0, 0, 0, 0)', plot_bgcolor='rgba(0, 0, 0, 0)',
+            margin=dict(l=60, r=200, t=8, b=20)
+        )
+        traces.update_xaxes(patch={
+            'showgrid': False,
+            'visible': False,
+        })
+        traces.update_xaxes(patch={
+            'visible': True,
+            'showline': True,
+            'linecolor': 'rgb(0, 0, 0)',
+            'title_text': 'time [s]'},
+            row=3, col=1
+        )
+        traces.update_yaxes(patch={
+            'showgrid': False,
+            'visible': True,
+            'showline': True,
+            'linecolor': 'rgb(0, 0, 0)'
+        })
+        traces.update_yaxes(title_text="Ephys [V]", row=1, col=1)
+        traces.update_yaxes(title_text="dF/F", row=3, col=1)
+        traces.update_yaxes(patch={
+            "title_text": "Spikes",
+            "showticklabels": False,
+            "ticks": ""},
+            row=2, col=1
+        )
+
+        self.widget_traces = go.FigureWidget(traces)
 
         # Two photon imaging
         self.photon_series = OphysImageSeriesWidget(
@@ -90,7 +105,7 @@ class AllenDashboard(widgets.VBox):
         )
         self.photon_series.out_fig.update_layout(
             showlegend=False,
-            margin=dict(l=30, r=5, t=65, b=65),
+            margin=dict(l=10, r=25, t=30, b=65),
         )
 
         # Frame controller
@@ -109,9 +124,9 @@ class AllenDashboard(widgets.VBox):
 
         # Add line traces marking Image frame point
         self.frame_point = go.Scatter(x=[0, 0], y=[-1000, 1000])
-        self.electrical.out_fig.add_trace(self.frame_point)
-        self.fluorescence.out_fig.add_trace(self.frame_point)
-        self.spikes_fluorescence.out_fig.add_trace(self.frame_point)
+        # self.electrical.out_fig.add_trace(self.frame_point)
+        # self.fluorescence.out_fig.add_trace(self.frame_point)
+        # self.spikes_fluorescence.out_fig.add_trace(self.frame_point)
 
         # Updates frame point
         self.frame_controller.observe(self.update_frame_point)
@@ -121,20 +136,17 @@ class AllenDashboard(widgets.VBox):
 
         # Layout
         hbox_header = widgets.HBox([self.time_window_controller])
-        vbox_widgets = widgets.VBox([self.electrical, self.spikes_fluorescence, self.fluorescence])
-        hbox_widgets = widgets.HBox([vbox_widgets, self.photon_series])
-        
-        self.update_spike_traces()
-
+        hbox_widgets = widgets.HBox([self.photon_series, self.widget_traces])
         self.children = [hbox_header, self.frame_controller, hbox_widgets]
 
+        self.updated_time_range()
 
     def update_frame_point(self, change):
         """Updates Image frame and frame point relative position on temporal traces"""
         if isinstance(change['new'], float):
-            self.electrical.out_fig.data[1].x = [change['new'], change['new']]
-            self.fluorescence.out_fig.data[1].x = [change['new'], change['new']]
-            self.spikes_fluorescence.out_fig.data[1].x = [change['new'], change['new']]
+            # self.electrical.out_fig.data[1].x = [change['new'], change['new']]
+            # self.fluorescence.out_fig.data[1].x = [change['new'], change['new']]
+            # self.spikes_fluorescence.out_fig.data[1].x = [change['new'], change['new']]
 
             frame_number = int(change['new'] * self.nwb.acquisition['raw_ophys'].rate)
             file_path = self.nwb.acquisition['raw_ophys'].external_file[0]
@@ -148,7 +160,6 @@ class AllenDashboard(widgets.VBox):
 
     def updated_time_range(self, change=None):
         """Operations to run whenever time range gets updated"""
-        self.update_spike_traces()
 
         # Update frame slider
         if self.time_window_controller.value[1] < self.frame_controller.min:
@@ -159,23 +170,46 @@ class AllenDashboard(widgets.VBox):
             self.frame_controller.min = self.time_window_controller.value[0]
         xpoint = round(np.mean(self.time_window_controller.value))
         self.frame_controller.value = xpoint
-        self.electrical.out_fig.data[1].x = [xpoint, xpoint]
-        self.fluorescence.out_fig.data[1].x = [xpoint, xpoint]
 
-        self.fluorescence.out_fig.data = [
-            self.fluorescence.out_fig.data[0],
-            self.fluorescence.out_fig.data[1]
-        ]
-        self.electrical.out_fig.data = [
-            self.electrical.out_fig.data[0],
-            self.electrical.out_fig.data[1]
-        ]
+        with self.widget_traces.batch_update():
+            time_window = self.time_window_controller.value
 
-    def spikes_viewer(self, b=None):
-        # self.show_spikes = not self.show_spikes
-        
-        for spike_trace in self.spike_traces:
-            self.spikes_fluorescence.out_fig.add_trace(spike_trace)
+            # Update electrophys trace
+            timeseries = self.ecephys_trace
+            istart = timeseries_time_to_ind(timeseries, time_window[0])
+            istop = timeseries_time_to_ind(timeseries, time_window[1])
+            yy, units = get_timeseries_in_units(timeseries, istart, istop)
+            xx = get_timeseries_tt(timeseries, istart, istop)
+            xrange0, xrange1 = min(xx), max(xx)
+            self.widget_traces.data[0].x = xx
+            self.widget_traces.data[0].y = list(yy)
+            self.widget_traces.update_layout(
+                yaxis={"range": [min(yy), max(yy)], "autorange": False},
+                xaxis={"range": [xrange0, xrange1], "autorange": False}
+            )
+
+            # Update ophys trace
+            timeseries = self.ophys_trace
+            istart = timeseries_time_to_ind(timeseries, time_window[0])
+            istop = timeseries_time_to_ind(timeseries, time_window[1])
+            yy, units = get_timeseries_in_units(timeseries, istart, istop)
+            xx = get_timeseries_tt(timeseries, istart, istop)
+            self.widget_traces.data[1].x = xx
+            self.widget_traces.data[1].y = list(yy)
+            self.widget_traces.update_layout(
+                yaxis2={"range": [min(yy), max(yy)], "autorange": False},
+                xaxis2={"range": [xrange0, xrange1], "autorange": False}
+            )
+
+            # Update spikes traces
+            self.widget_traces.data = [
+                self.widget_traces.data[0],
+                self.widget_traces.data[1]
+            ]
+            self.update_spike_traces()
+            self.widget_traces.update_layout(
+                xaxis1={"range": [xrange0, xrange1], "autorange": False}
+            )
 
     def update_spike_traces(self):
         """Updates list of go.Scatter objects at spike times"""
@@ -187,9 +221,10 @@ class AllenDashboard(widgets.VBox):
         selected_spikes = all_spikes[mask]
         # Makes a go.Scatter object for each spike in chosen interval
         for spkt in selected_spikes:
-            self.spike_traces.append(go.Scatter(
+            self.widget_traces.add_trace(go.Scatter(
                 x=[spkt, spkt],
                 y=[-1000, 1000],
-                line={"color": "gray", "width": .5}
-            ))
-        self.spikes_viewer()
+                line={"color": "gray", "width": .5}),
+                row=2, col=1
+            )
+        # self.widget_traces.data[1] = self.spike_traces
