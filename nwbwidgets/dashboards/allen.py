@@ -53,16 +53,6 @@ class AllenDashboard(widgets.VBox):
             row=3, col=1
         )
 
-        # Spikes
-        traces.add_trace(
-            go.Scatter(
-                x=[0],
-                y=[0],
-                line={"color": "gray", "width": .5},
-                mode='lines'),
-            row=2, col=1
-        )
-
         # Layout
         traces.update_layout(
             height=400, width=800, showlegend=False, title=None,
@@ -105,7 +95,8 @@ class AllenDashboard(widgets.VBox):
         )
         self.photon_series.out_fig.update_layout(
             showlegend=False,
-            margin=dict(l=10, r=30, t=20, b=80),
+            margin=dict(l=10, r=30, t=20, b=30),
+            width=300, height=300,
         )
 
         # Frame controller
@@ -115,18 +106,21 @@ class AllenDashboard(widgets.VBox):
             min=self.time_window_controller.value[0],
             max=self.time_window_controller.value[1],
             description='Frame: ',
-            style={'description_width': '360px'},
+            style={'description_width': '355px'},
             continuous_update=False,
             readout=False,
             orientation='horizontal',
-            layout=Layout(width='923px')
+            layout=Layout(width='910px')
         )
 
         # Add line traces marking Image frame point
-        self.frame_point = go.Scatter(x=[0, 0], y=[-1000, 1000])
-        # self.electrical.out_fig.add_trace(self.frame_point)
-        # self.fluorescence.out_fig.add_trace(self.frame_point)
-        # self.spikes_fluorescence.out_fig.add_trace(self.frame_point)
+        for i in range(3):
+            self.widget_traces.add_trace(go.Scatter(
+                x=[0, 0], y=[-1000, 1000],
+                line={"color": "rgb(86, 117, 153)", "width": 4},
+                mode='lines'),
+                row=i + 1, col=1
+            )
 
         # Updates frame point
         self.frame_controller.observe(self.update_frame_point)
@@ -144,10 +138,12 @@ class AllenDashboard(widgets.VBox):
     def update_frame_point(self, change):
         """Updates Image frame and frame point relative position on temporal traces"""
         if isinstance(change['new'], float):
-            # self.electrical.out_fig.data[1].x = [change['new'], change['new']]
-            # self.fluorescence.out_fig.data[1].x = [change['new'], change['new']]
-            # self.spikes_fluorescence.out_fig.data[1].x = [change['new'], change['new']]
+            # Update frame traces position
+            self.widget_traces.data[2].x = [change['new'], change['new']]
+            self.widget_traces.data[3].x = [change['new'], change['new']]
+            self.widget_traces.data[4].x = [change['new'], change['new']]
 
+            # Update image frame
             frame_number = int(change['new'] * self.nwb.acquisition['raw_ophys'].rate)
             file_path = self.nwb.acquisition['raw_ophys'].external_file[0]
             if "\\" in file_path:
@@ -160,18 +156,26 @@ class AllenDashboard(widgets.VBox):
 
     def updated_time_range(self, change=None):
         """Operations to run whenever time range gets updated"""
-
-        # Update frame slider
-        if self.time_window_controller.value[1] < self.frame_controller.min:
-            self.frame_controller.min = self.time_window_controller.value[0]
-            self.frame_controller.max = self.time_window_controller.value[1]
-        else:
-            self.frame_controller.max = self.time_window_controller.value[1]
-            self.frame_controller.min = self.time_window_controller.value[0]
-        xpoint = round(np.mean(self.time_window_controller.value))
-        self.frame_controller.value = xpoint
-
         with self.widget_traces.batch_update():
+            # Update frame slider
+            if self.time_window_controller.value[1] < self.frame_controller.min:
+                self.frame_controller.min = self.time_window_controller.value[0]
+                self.frame_controller.max = self.time_window_controller.value[1]
+            else:
+                self.frame_controller.max = self.time_window_controller.value[1]
+                self.frame_controller.min = self.time_window_controller.value[0]
+            xpoint = round(np.mean(self.time_window_controller.value))
+            self.frame_controller.value = xpoint
+
+            # Renew plots
+            self.widget_traces.data = [
+                self.widget_traces.data[0],  # Ecephys trace
+                self.widget_traces.data[1],  # Ophys trace
+                self.widget_traces.data[2],  # Frame trace upper panel
+                self.widget_traces.data[3],  # Frame trace middle panel
+                self.widget_traces.data[4],  # Frame trace lower panel
+            ]
+
             time_window = self.time_window_controller.value
 
             # Update electrophys trace
@@ -197,18 +201,14 @@ class AllenDashboard(widgets.VBox):
             self.widget_traces.data[1].x = xx
             self.widget_traces.data[1].y = list(yy)
             self.widget_traces.update_layout(
-                yaxis2={"range": [min(yy), max(yy)], "autorange": False},
-                xaxis2={"range": [xrange0, xrange1], "autorange": False}
+                yaxis3={"range": [min(yy), max(yy)], "autorange": False},
+                xaxis3={"range": [xrange0, xrange1], "autorange": False}
             )
 
             # Update spikes traces
-            self.widget_traces.data = [
-                self.widget_traces.data[0],
-                self.widget_traces.data[1]
-            ]
             self.update_spike_traces()
             self.widget_traces.update_layout(
-                xaxis1={"range": [xrange0, xrange1], "autorange": False}
+                xaxis2={"range": [xrange0, xrange1], "autorange": False}
             )
 
     def update_spike_traces(self):
@@ -224,7 +224,7 @@ class AllenDashboard(widgets.VBox):
             self.widget_traces.add_trace(go.Scatter(
                 x=[spkt, spkt],
                 y=[-1000, 1000],
-                line={"color": "gray", "width": .5}),
+                line={"color": "gray", "width": .5},
+                mode='lines'),
                 row=2, col=1
             )
-        # self.widget_traces.data[1] = self.spike_traces
