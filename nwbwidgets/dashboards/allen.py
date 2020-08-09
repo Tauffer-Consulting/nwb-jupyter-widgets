@@ -2,11 +2,11 @@ from nwbwidgets.utils.timeseries import (get_timeseries_maxt, get_timeseries_min
                                          timeseries_time_to_ind, get_timeseries_in_units,
                                          get_timeseries_tt)
 from nwbwidgets.controllers import StartAndDurationController
-from nwbwidgets.ophys import OphysImageSeriesWidget
+from nwbwidgets.ophys import OphysImageSeriesWidget, compute_outline
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from ipywidgets import widgets, Layout
-from tifffile import imread
+from tifffile import imread, TiffFile
 from pathlib import Path, PureWindowsPath
 import numpy as np
 
@@ -134,6 +134,7 @@ class AllenDashboard(widgets.VBox):
         self.children = [hbox_header, self.frame_controller, hbox_widgets]
 
         self.updated_time_range()
+        self.add_mask()
 
     def update_frame_point(self, change):
         """Updates Image frame and frame point relative position on temporal traces"""
@@ -228,3 +229,36 @@ class AllenDashboard(widgets.VBox):
                 mode='lines'),
                 row=2, col=1
             )
+
+    def add_mask(self, b=0):
+        """Add pixel mask to Image frame"""
+        # self.btn_mask_active = not self.btn_mask_active
+        # if self.btn_mask_active:
+        mask_array = self.nwb.processing['ophys'].data_interfaces['image_segmentation']['plane_segmantation']['pixel_mask'][:][0]
+        win_path = PureWindowsPath(self.nwb.acquisition['raw_ophys'].external_file[0])
+        path_ext_file = Path(win_path)
+        tif = TiffFile(path_ext_file)
+        page = tif.pages[0]
+        n_y, n_x = page.shape
+
+        mask_matrix = np.zeros((n_y, n_x))
+        for px in mask_array:
+            mask_matrix[px[1], px[0]] = 1
+
+        x_coords, y_coords = compute_outline(image_mask=mask_matrix, threshold=0.9)
+
+        if len(self.photon_series.out_fig.data) == 1:
+            trace = go.Scatter(
+                x=x_coords,
+                y=y_coords,
+                fill='toself',
+                mode='lines',
+                line={"color": "rgb(219, 59, 59)", "width": 4},
+            )
+            self.photon_series.out_fig.add_trace(trace)
+        else:
+            self.photon_series.out_fig.data[1].x = x_coords
+            self.photon_series.out_fig.data[1].y = y_coords
+        # else:
+        #     self.photon_series.out_fig.data[1].x = []
+        #     self.photon_series.out_fig.data[1].y = []
