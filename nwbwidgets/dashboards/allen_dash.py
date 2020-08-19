@@ -10,6 +10,7 @@ from plotly.subplots import make_subplots
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+import dash_bootstrap_components as dbc
 
 
 class AllenDashboard(html.Div):
@@ -79,28 +80,30 @@ class AllenDashboard(html.Div):
 
         # Dashboard main layout
         self.children = [
-            html.H1(
-                "Allen OEphys Dashboard",
-                style={'text-align': 'center'}
-            ),
-            html.Hr(),
-
-            html.Div([
-                dcc.Slider(
-                    id="select_start_time",
-                    min=0, max=100, value=0, step=0.05,
+            dbc.Container([
+                html.H1(
+                    "Allen OEphys Dashboard",
+                    style={'text-align': 'center'}
                 ),
-                dcc.Input(
-                    id="select_duration",
-                    type="number",
-                    value=15
-                )],
-                style={'width': "400px"}
-            ),
+                html.Hr(),
 
-            html.Br(),
+                html.Div([
+                    dcc.Slider(
+                        id="select_start_time",
+                        min=0, max=100, value=0, step=0.05,
+                    ),
+                    dcc.Input(
+                        id="select_duration",
+                        type="number",
+                        value=15
+                    )],
+                    style={'width': "400px"}
+                ),
 
-            dcc.Graph(id='figure_traces', figure={})
+                html.Br(),
+
+                dcc.Graph(id='figure_traces', figure={})
+            ])
         ]
 
         @self.parent_app.callback(

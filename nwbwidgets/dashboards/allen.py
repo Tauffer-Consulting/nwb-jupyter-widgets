@@ -25,6 +25,9 @@ class AllenDashboard(widgets.VBox):
             start=0,
             duration=5,
         )
+        self.btn_mask = widgets.Button(description='Pixel Mask')
+        self.btn_mask.on_click(self.add_mask)
+        self.btn_mask_active = False
 
         # Traces
         traces = make_subplots(rows=3, cols=1, row_heights=[0.4, 0.2, 0.4],
@@ -146,7 +149,9 @@ class AllenDashboard(widgets.VBox):
 
             # Update image frame
             frame_number = int(change['new'] * self.nwb.acquisition['raw_ophys'].rate)
+            self.frame_number = frame_number
             file_path = self.nwb.acquisition['raw_ophys'].external_file[0]
+            self.file_path = file_path
             if "\\" in file_path:
                 win_path = PureWindowsPath(file_path)
                 path_ext_file = Path(win_path)
