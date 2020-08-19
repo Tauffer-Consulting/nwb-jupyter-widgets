@@ -25,7 +25,7 @@ class AllenDashboard(html.Div):
         # Electrophysiology
         self.ecephys_trace = nwb.processing['ecephys'].data_interfaces['filtered_membrane_voltage']
         self.traces.add_trace(
-            go.Scatter(
+            go.Scattergl(
                 x=[0],
                 y=[0],
                 line={"color": "black", "width": 1},
@@ -37,7 +37,7 @@ class AllenDashboard(html.Div):
         # Optophysiology
         self.ophys_trace = nwb.processing['ophys'].data_interfaces['fluorescence'].roi_response_series['roi_response_series']
         self.traces.add_trace(
-            go.Scatter(
+            go.Scattergl(
                 x=[0],
                 y=[0],
                 line={"color": "black", "width": 1},
@@ -156,7 +156,7 @@ class AllenDashboard(html.Div):
         selected_spikes = all_spikes[mask]
         # Makes a go.Scatter object for each spike in chosen interval
         for spkt in selected_spikes:
-            self.traces.add_trace(go.Scatter(
+            self.traces.add_trace(go.Scattergl(
                 x=[spkt, spkt],
                 y=[-1000, 1000],
                 line={"color": "gray", "width": .5},
