@@ -36,6 +36,7 @@ def show_timeseries_mpl(time_series: TimeSeries, time_window=None, ax=None, zero
     xlabel: str
     ylabel: str
     title: str
+    figsize: tuple, optional
     kwargs
 
     Returns
@@ -159,8 +160,7 @@ class AbstractTraceWidget(widgets.VBox):
         if foreign_time_window_controller is None:
             tmin = get_timeseries_mint(timeseries)
             tmax = get_timeseries_maxt(timeseries)
-            self.time_window_controller = StartAndDurationController(
-                tmax, tmin, start_value=tmin, duration=min(5, tmax - tmin))
+            self.time_window_controller = StartAndDurationController(tmax, tmin)
         else:
             self.time_window_controller = foreign_time_window_controller
 
@@ -176,7 +176,8 @@ class AbstractTraceWidget(widgets.VBox):
         return
 
     def set_controls(self, **kwargs):
-        self.controls.update(timeseries=fixed(self.timeseries), time_window=self.time_window_controller)
+        self.controls.update(timeseries=fixed(self.timeseries),
+                             time_window=self.time_window_controller)
         self.controls.update({key: widgets.fixed(val) for key, val in kwargs.items()})
 
     def set_out_fig(self):
@@ -360,7 +361,7 @@ def plot_grouped_traces(time_series: TimeSeries, time_window=None, order=None, a
     ax.set_xlabel('time (s)')
 
     if len(offsets) > 1:
-        ax.set_ylim(-offsets[0], offsets[-1] + offsets[0])
+        ax.set_ylim(offsets[0] - (offsets[1] - offsets[0])/2, offsets[-1] + (offsets[-1] - offsets[-2])/2)
     if len(order) <= 30:
         ax.set_yticks(offsets)
         ax.set_yticklabels(order)
@@ -420,8 +421,7 @@ class BaseGroupedTraceWidget(widgets.HBox):
         else:
             self.tmin = get_timeseries_mint(time_series)
             self.tmax = get_timeseries_maxt(time_series)
-            self.time_window_controller = StartAndDurationController(tmin=self.tmin, tmax=self.tmax, start=self.tmin,
-                                                                     duration=5)
+            self.time_window_controller = StartAndDurationController(tmin=self.tmin, tmax=self.tmax)
 
         self.controls = dict(
             time_series=widgets.fixed(self.time_series),
@@ -486,8 +486,7 @@ class MultiTimeSeriesWidget(widgets.VBox):
         else:
             self.tmin = min(get_timeseries_mint(time_series) for time_series in time_series_list)
             self.tmax = max(get_timeseries_maxt(time_series) for time_series in time_series_list)
-        self.time_window_controller = StartAndDurationController(tmin=self.tmin, tmax=self.tmax, start=self.tmin,
-                                                                 duration=5)
+        self.time_window_controller = StartAndDurationController(tmin=self.tmin, tmax=self.tmax)
 
         widgets = [widget_class(time_series, foreign_time_window_controller=self.time_window_controller)
                    for widget_class, time_series in zip(widget_class_list, time_series_list)]
