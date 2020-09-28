@@ -12,6 +12,7 @@ from .timeseries import BaseGroupedTraceWidget
 from .utils.cmaps import linear_transfer_function
 from .utils.dynamictable import infer_categorical_columns
 from .utils.functional import MemoizeMutable
+from .base import df_to_hover_text
 
 color_wheel = ['red', 'blue', 'green', 'black', 'magenta', 'yellow']
 
@@ -127,23 +128,27 @@ def show_plane_segmentation_2d(plane_seg: PlaneSegmentation, color_wheel=color_w
     color_wheel: list
     color_by: str, optional
     threshold: float
-    fig: plotly.graph_objects.Figure, options
+    fig: plotly.graph_objects.Figure, optional
 
     Returns
     -------
 
     """
+    layout_kwargs = dict()
     if color_by:
-        if color_by in plane_seg:
-            cats = np.unique(plane_seg[color_by][:])
-        else:
+        if color_by not in plane_seg:
             raise ValueError('specified color_by parameter, {}, not in plane_seg object'.format(color_by))
+        cats = np.unique(plane_seg[color_by][:])
+    else:
+        layout_kwargs.update(title=color_by)
+
     data = plane_seg['image_mask'].data
     nUnits = data.shape[0]
     if fig is None:
         fig = go.FigureWidget()
 
     aux_leg = []
+    all_hover = df_to_hover_text(plane_seg.to_dataframe())
 
     for i in range(nUnits):
         if plane_seg[color_by][i] not in aux_leg:
@@ -155,15 +160,12 @@ def show_plane_segmentation_2d(plane_seg: PlaneSegmentation, color_wheel=color_w
 
         if color_by:
             c = color_wheel[np.where(cats == plane_seg[color_by][i])[0][0]]
-            kwargs.update(line_color=c)
-        # hover text
-        hovertext = '<b>roi_id</b>: ' + str(plane_seg.id[i])
-        rois_cols = list(plane_seg.colnames)
-        if 'roi_id' in rois_cols:
-            rois_cols.remove('roi_id')
-        sec_str = '<br>'.join([col + ': ' + str(plane_seg[col][i]) for col in rois_cols if
-                               isinstance(plane_seg[col][i], (int, float, np.integer, np.float, str))])
-        hovertext += '<br>' + sec_str
+            kwargs.update(line_color=c,
+                          name=str(plane_seg[color_by][i]),
+                          legendgroup=str(plane_seg[color_by][i]),
+                          showlegend=show_leg,
+                          )
+
         # form cell borders
         x, y = compute_outline(plane_seg['image_mask'][i], threshold)
 
@@ -172,33 +174,31 @@ def show_plane_segmentation_2d(plane_seg: PlaneSegmentation, color_wheel=color_w
                 x=x, y=y,
                 fill='toself',
                 mode='lines',
-                name=str(plane_seg[color_by][i]),
-                legendgroup=str(plane_seg[color_by][i]),
-                showlegend=show_leg,
-                text=hovertext,
+                text=all_hover[i],
                 hovertext='text',
                 line=dict(width=.5),
                 **kwargs
             )
         )
-        # fig.update_layout(
-        #    margin=go.layout.Margin(l=60, r=60, b=60, t=60, pad=1),
-        #    plot_bgcolor="rgb(245, 245, 245)",
-        # )
-        width = 800
-        fig.update_layout(
-            width=width,
-            height=width * plane_seg['image_mask'].shape[2] / plane_seg['image_mask'].shape[1],
-            yaxis=dict(
-                range=[0, plane_seg['image_mask'].shape[2]],
-                mirror=True
-            ),
-            title=color_by,
-            xaxis=dict(
-                range=[0, plane_seg['image_mask'].shape[1]],
-                mirror=True
-            )
-        )
+
+    width = 600
+    fig.update_layout(
+        width=width,
+        yaxis=dict(
+            mirror=True,
+            scaleanchor="x",
+            scaleratio=1,
+            range=[0, plane_seg['image_mask'].shape[2]],
+            constrain='domain'
+        ),
+        xaxis=dict(
+            mirror=True,
+            range=[0, plane_seg['image_mask'].shape[1]],
+            constrain='domain'
+        ),
+        margin=dict(t=10, b=10),
+        **layout_kwargs
+    )
 
     return fig
 
@@ -233,7 +233,6 @@ class PlaneSegmentation2DWidget(widgets.VBox):
         cats = np.unique(self.plane_seg[color_by][:])
         legendgroups = []
         with self.fig.batch_update():
-            self.fig.update_layout(title=color_by)
             for color_val, data in zip(self.plane_seg[color_by][:], self.fig.data):
                 color = self.color_wheel[np.where(cats == color_val)[0][0]]  # store the color
                 data.line.color = color  # set the color
@@ -245,15 +244,6 @@ class PlaneSegmentation2DWidget(widgets.VBox):
                     legendgroups.append(color_val)
                 else:
                     data.showlegend = False
-            self.fig.update_layout(
-                yaxis=dict(
-                    range=[0, self.plane_seg['image_mask'].shape[2]]
-                ),
-                title=color_by,
-                xaxis=dict(
-                    range=[0, self.plane_seg['image_mask'].shape[1]]
-                )
-            )
 
 
 def route_plane_segmentation(plane_seg: PlaneSegmentation, neurodata_vis_spec: dict):
