@@ -12,6 +12,7 @@ import numpy as np
 
 
 class AllenDashboard(widgets.VBox):
+    """Dashboard built with ipywidgets version of NWB widgets"""
     def __init__(self, nwb):
         super().__init__()
         self.nwb = nwb

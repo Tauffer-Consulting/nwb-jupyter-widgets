@@ -9,11 +9,53 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
+from dash.dependencies import Input, Output
+
+
+class StartAndDurationController(html.Div):
+    """Controller of start time and duration for time series windows"""
+    def __init__(self, parent_app, tmin=0, tmax=1, start=0, duration=1):
+        super().__init__([])
+
+        # Start controller
+        slider_start = dcc.Slider(
+            id="slider_start_time",
+            min=tmin, max=tmax, value=start, step=0.05,
+        )
+
+        row_start = dbc.FormGroup(
+            [
+                dbc.Label('start (s):'),
+                dbc.Col(slider_start)
+            ],
+        )
+
+        # Duration controller
+        input_duration = dcc.Input(
+            id="input_duration",
+            type='number',
+            min=.5, max=100, step=.1, value=duration
+        )
+
+        row_duration = dbc.FormGroup(
+            [
+                dbc.Label('duration (s):'),
+                dbc.Col(input_duration)
+            ],
+        )
+
+        # Controllers main layout
+        self.children = [
+            dbc.FormGroup([
+                dbc.Col(row_start, width=9),
+                dbc.Col(row_duration, width=3)
+            ], row=True)
+        ]
 
 
 class AllenDashboard(html.Div):
+    """Dashboard built with Dash version of NWB widgets"""
     def __init__(self, parent_app, nwb):
         super().__init__([])
         self.parent_app = parent_app
@@ -50,7 +92,7 @@ class AllenDashboard(html.Div):
         self.traces.update_layout(
             height=400, width=800, showlegend=False, title=None,
             paper_bgcolor='rgba(0, 0, 0, 0)', plot_bgcolor='rgba(0, 0, 0, 0)',
-            margin=dict(l=60, r=200, t=8, b=20)
+            margin=dict(l=60, r=20, t=8, b=20)
         )
         self.traces.update_xaxes(patch={
             'showgrid': False,
@@ -78,6 +120,12 @@ class AllenDashboard(html.Div):
             row=2, col=1
         )
 
+        # Controllers
+        self.controller_start_and_duration = StartAndDurationController(
+            parent_app=parent_app,
+            tmin=0, tmax=100, start=0, duration=10
+        )
+
         # Dashboard main layout
         self.children = [
             dbc.Container([
@@ -86,30 +134,16 @@ class AllenDashboard(html.Div):
                     style={'text-align': 'center'}
                 ),
                 html.Hr(),
-
-                html.Div([
-                    dcc.Slider(
-                        id="select_start_time",
-                        min=0, max=100, value=0, step=0.05,
-                    ),
-                    dcc.Input(
-                        id="select_duration",
-                        type="number",
-                        value=15
-                    )],
-                    style={'width': "400px"}
-                ),
-
+                self.controller_start_and_duration,
                 html.Br(),
-
                 dcc.Graph(id='figure_traces', figure={})
             ])
         ]
 
         @self.parent_app.callback(
             [Output(component_id='figure_traces', component_property='figure')],
-            [Input(component_id='select_start_time', component_property='value'),
-             Input(component_id='select_duration', component_property='value')]
+            [Input(component_id='slider_start_time', component_property='value'),
+             Input(component_id='input_duration', component_property='value')]
         )
         def update_traces(select_start_time, select_duration):
             time_window = [select_start_time, select_start_time + select_duration]

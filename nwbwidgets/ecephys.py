@@ -43,7 +43,7 @@ def show_spike_event_series(ses: SpikeEventSeries, **kwargs):
         ax.plot(np.mean(data, axis=1), color='k')
         ax.set_xlabel('Time')
         ax.set_ylabel('Amplitude')
-        fig.show()
+        # fig.show()
         return fig2widget(fig)
 
     if len(ses.data.shape) == 3:
